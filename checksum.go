@@ -23,13 +23,20 @@ var (
 	algs      []string
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	c := &cobra.Command{
-		Use:   "checksum file",
-		Short: "File checksum",
-		Long:  "File checksum",
-		Args:  cobra.ExactArgs(1),
-		RunE:  action,
+		Use:     "checksum file",
+		Short:   "File checksum",
+		Long:    "File checksum",
+		Version: fmt.Sprintf("%s - build %.7s @ %s", version, commit, date),
+		Args:    cobra.ExactArgs(1),
+		RunE:    action,
 	}
 	c.Flags().StringSliceVarP(&algs, "algs", "", supported, `List of used hash algorithm (e.g. --algs="md5,sha1" --algs="sha256")`)
 
