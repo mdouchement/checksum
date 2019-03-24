@@ -4,7 +4,7 @@ Checksum is a simple tool that compute checksums' algorithms on the given file.
 
 ## Requirements
 
-- Golang 1.9.x or above
+- Golang 1.11.x or above (gomodules required)
 
 ## Installation
 
@@ -15,7 +15,6 @@ go get github.com/mdouchement/checksum
 or in the configured folder
 
 ```
-dep ensure -vendor-only
 go install
 ```
 
@@ -38,6 +37,15 @@ $ checksum --algs sha256,blake2b /bin/ls
 Checksums:
       sha256: 5abf61c361e5ef91582e70634dfbf2214fbdb6f29c949160b69f27ae947d919d
      blake2b: 8670dbbb9fa5da4aaa15e9aab7adf0097064867406ee7937d67a8720b0e9d466
+
+
+
+$ checksum --algs="sha256" --append-to /tmp/checksum.txt /bin/ls
+$ checksum --algs="sha256" --append-to /tmp/checksum.txt /bin/ln
+
+$ cat /tmp/checksum.txt
+5abf61c361e5ef91582e70634dfbf2214fbdb6f29c949160b69f27ae947d919d  /bin/ls
+06d2d09d881efce5accf2cc1075045da1c21bdf001ba4c708f5e5227de169b70  /bin/ln
 ```
 
 ## License

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -9,18 +10,19 @@ import (
 	"hash"
 	"hash/crc32"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/blake2b"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/blake2b"
 )
 
 var (
-	supported = []string{"crc32", "md5", "sha1", "sha256", "sha512", "blake2b", "blake2b512"}
-	algs      []string
+	supported    = []string{"crc32", "md5", "sha1", "sha256", "sha512", "blake2b", "blake2b512"}
+	algs         []string
+	appendToFile string
 )
 
 var (
@@ -39,6 +41,7 @@ func main() {
 		RunE:    action,
 	}
 	c.Flags().StringSliceVarP(&algs, "algs", "", supported, `List of used hash algorithm (e.g. --algs="md5,sha1" --algs="sha256")`)
+	c.Flags().StringVarP(&appendToFile, "append-to", "", "", "File to append checksums to")
 
 	if err := c.Execute(); err != nil {
 		fmt.Println(err)
@@ -78,7 +81,8 @@ func action(c *cobra.Command, args []string) (err error) {
 		mhashes[alg] = h
 	}
 
-	f, err := os.Open(strings.TrimSpace(args[0]))
+	filename := strings.TrimSpace(args[0])
+	f, err := os.Open(filename)
 	if err != nil {
 		return errors.Wrap(err, "file")
 	}
@@ -89,6 +93,11 @@ func action(c *cobra.Command, args []string) (err error) {
 		return errors.Wrap(err, "checksum")
 	}
 
+	if appendToFile != "" {
+		return writeToFile(mhashes, filename)
+	}
+
+	// STDOUT
 	fmt.Println("Checksums:")
 	for _, alg := range supported {
 		if h, ok := mhashes[alg]; ok {
@@ -97,4 +106,20 @@ func action(c *cobra.Command, args []string) (err error) {
 	}
 
 	return nil
+}
+
+func writeToFile(mhashes map[string]hash.Hash, filename string) error {
+	b, err := ioutil.ReadFile(appendToFile)
+	if err != nil {
+		b = []byte{}
+	}
+	buf := bytes.NewBuffer(b)
+
+	for _, alg := range supported {
+		if h, ok := mhashes[alg]; ok {
+			buf.WriteString(fmt.Sprintf("%x  %s\n", h.Sum(nil), filename))
+		}
+	}
+
+	return ioutil.WriteFile(appendToFile, buf.Bytes(), 0644)
 }
