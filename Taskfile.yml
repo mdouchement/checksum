@@ -1,0 +1,77 @@
+# https://taskfile.dev
+# https://github.com/mdouchement/checksum
+
+version: '3'
+
+vars:
+  VERSION: 0.1.1
+  REVISION: { sh: git rev-parse HEAD }
+  WORKDIR: { sh: pwd }
+
+env:
+  CGO_ENABLED: 0
+
+tasks:
+  clean:
+    desc: Clean project
+    cmds:
+      - rm -rf {{.WORKDIR}}/dist
+
+  build-all:
+    desc: Build all binaries
+    cmds:
+      - task: clean
+      - mkdir -p {{.WORKDIR}}/dist
+
+      - task: build
+        vars:
+          BINARY_NAME: checksum-linux-amd64
+          TARGET_DIST: GOOS=linux GOARCH=amd64
+
+      - task: checksum
+        vars:
+          BINARY_NAME: checksum-linux-amd64
+
+      - task: build
+        vars:
+          BINARY_NAME: checksum-linux-arm64
+          TARGET_DIST: GOOS=linux GOARCH=arm64
+
+      - task: checksum
+        vars:
+          BINARY_NAME: checksum-linux-arm64
+
+      - task: build
+        vars:
+          BINARY_NAME: checksum-darwin-amd64
+          TARGET_DIST: GOOS=darwin GOARCH=amd64
+
+      - task: checksum
+        vars:
+          BINARY_NAME: checksum-darwin-amd64
+
+      - task: build
+        vars:
+          BINARY_NAME: checksum-windows-amd64.exe
+          TARGET_DIST: GOOS=windows GOARCH=amd64
+
+      - task: checksum
+        vars:
+          BINARY_NAME: checksum-windows-amd64.exe
+
+  build:
+    dir: '{{.WORKDIR}}'
+    cmds:
+      - '{{.TARGET_DIST}} go build -ldflags "{{.LDFLAGS | splitList "\n" | join " "}}" -o {{.WORKDIR}}/dist/{{.BINARY_NAME}} .'
+    vars:
+      LDFLAGS: |
+        -s
+        -w
+        -X main.version={{.VERSION}}
+        -X main.revision={{ printf "%.7s" .REVISION }}
+        -X main.date={{now | date "2006-01-02~15:04:05"}}
+
+  checksum:
+    dir: "{{.WORKDIR}}/dist"
+    cmds:
+      - checksum --algs="sha256" --append-to checksum.txt {{.BINARY_NAME}}

@@ -14,8 +14,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/muesli/coral"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -32,12 +32,12 @@ var (
 )
 
 func main() {
-	c := &cobra.Command{
+	c := &coral.Command{
 		Use:     "checksum file",
 		Short:   "File checksum",
 		Long:    "File checksum",
 		Version: fmt.Sprintf("%s - build %.7s @ %s", version, commit, date),
-		Args:    cobra.ExactArgs(1),
+		Args:    coral.ExactArgs(1),
 		RunE:    action,
 	}
 	c.Flags().StringSliceVarP(&algs, "algs", "", supported, `List of used hash algorithm (e.g. --algs="md5,sha1" --algs="sha256")`)
@@ -48,7 +48,7 @@ func main() {
 	}
 }
 
-func action(c *cobra.Command, args []string) (err error) {
+func action(c *coral.Command, args []string) (err error) {
 	hashes := []io.Writer{}
 	mhashes := map[string]hash.Hash{}
 	for _, alg := range algs {

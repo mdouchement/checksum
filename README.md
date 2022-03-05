@@ -4,18 +4,12 @@ Checksum is a simple tool that compute checksums' algorithms on the given file.
 
 ## Requirements
 
-- Golang 1.11.x or above (gomodules required)
+- Golang 1.17.x or above (gomodules required)
 
 ## Installation
 
 ```
-go get github.com/mdouchement/checksum
-```
-
-or in the configured folder
-
-```
-go install
+go install github.com/mdouchement/checksum@latest
 ```
 
 ## Usage
