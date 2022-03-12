@@ -40,6 +40,9 @@ $ checksum --algs="sha256" --append-to /tmp/checksum.txt /bin/ln
 $ cat /tmp/checksum.txt
 5abf61c361e5ef91582e70634dfbf2214fbdb6f29c949160b69f27ae947d919d  /bin/ls
 06d2d09d881efce5accf2cc1075045da1c21bdf001ba4c708f5e5227de169b70  /bin/ln
+
+$ checksum --verify 5abf61c361e5ef91582e70634dfbf2214fbdb6f29c949160b69f27ae947d919d /bin/ls
+Validated with blake2b
 ```
 
 ## License
