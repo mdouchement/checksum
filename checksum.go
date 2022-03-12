@@ -20,9 +20,9 @@ import (
 )
 
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	version  = "dev"
+	revision = "none"
+	date     = "unknown"
 )
 
 type controller struct {
@@ -45,7 +45,7 @@ func main() {
 		Short:        "File checksum",
 		Long:         "File checksum",
 		SilenceUsage: true,
-		Version:      fmt.Sprintf("%s - build %.7s @ %s", version, commit, date),
+		Version:      fmt.Sprintf("%s - build %.7s @ %s", version, revision, date),
 		Args:         coral.ExactArgs(1),
 		RunE: func(_ *coral.Command, args []string) error {
 			filename := strings.TrimSpace(args[0])
