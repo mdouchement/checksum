@@ -6,11 +6,11 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -20,38 +20,98 @@ import (
 )
 
 var (
-	supported    = []string{"crc32", "md5", "sha1", "sha256", "sha512", "blake2b", "blake2b512"}
-	algs         []string
-	appendToFile string
-)
-
-var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 )
 
-func main() {
-	c := &coral.Command{
-		Use:     "checksum file",
-		Short:   "File checksum",
-		Long:    "File checksum",
-		Version: fmt.Sprintf("%s - build %.7s @ %s", version, commit, date),
-		Args:    coral.ExactArgs(1),
-		RunE:    action,
-	}
-	c.Flags().StringSliceVarP(&algs, "algs", "", supported, `List of used hash algorithm (e.g. --algs="md5,sha1" --algs="sha256")`)
-	c.Flags().StringVarP(&appendToFile, "append-to", "", "", "File to append checksums to")
+type controller struct {
+	supported []string
+	algs      []string
+	append    string
+	verify    string
 
-	if err := c.Execute(); err != nil {
-		fmt.Println(err)
+	mhashes map[string]hash.Hash
+}
+
+func main() {
+	c := &controller{
+		supported: []string{"crc32", "md5", "sha1", "sha256", "sha512", "blake2b", "blake2b512"},
+		mhashes:   make(map[string]hash.Hash, 0),
+	}
+
+	cmd := &coral.Command{
+		Use:          "checksum file",
+		Short:        "File checksum",
+		Long:         "File checksum",
+		SilenceUsage: true,
+		Version:      fmt.Sprintf("%s - build %.7s @ %s", version, commit, date),
+		Args:         coral.ExactArgs(1),
+		RunE: func(_ *coral.Command, args []string) error {
+			filename := strings.TrimSpace(args[0])
+
+			//
+
+			if c.verify != "" {
+				return c.validate(filename)
+			}
+
+			//
+
+			err := c.compute(filename)
+			if err != nil {
+				return errors.Wrap(err, "compute")
+			}
+
+			if c.append != "" {
+				return c.writeToFile(filename)
+			}
+
+			// STDOUT
+			fmt.Println("Checksums:")
+			for _, alg := range c.supported {
+				if h, ok := c.mhashes[alg]; ok {
+					fmt.Printf("%12s: %x\n", alg, h.Sum(nil))
+				}
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().StringSliceVarP(&c.algs, "algs", "", c.supported, `List of used hash algorithm (e.g. --algs="md5,sha1" --algs="sha256")`)
+	cmd.Flags().StringVarP(&c.append, "append-to", "", "", "File to append checksums to")
+	cmd.Flags().StringVarP(&c.verify, "verify", "", "", "Verify checksum of the file")
+
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
 	}
 }
 
-func action(c *coral.Command, args []string) (err error) {
+func (c *controller) validate(filename string) error {
+	err := c.compute(filename)
+	if err != nil {
+		return errors.Wrap(err, "compute")
+	}
+
+	checksum := strings.TrimSpace(c.verify)
+	for _, alg := range c.supported {
+		if h, ok := c.mhashes[alg]; ok {
+			hex.EncodeToString(h.Sum(nil))
+			if checksum == hex.EncodeToString(h.Sum(nil)) {
+				fmt.Println("Validated with", alg)
+				return nil
+			}
+		}
+	}
+
+	return errors.New("invalid checksum")
+}
+
+func (c *controller) compute(filename string) error {
+	var err error
 	hashes := []io.Writer{}
-	mhashes := map[string]hash.Hash{}
-	for _, alg := range algs {
+
+	for _, alg := range c.algs {
 		var h hash.Hash
 		switch alg {
 		case "crc32":
@@ -78,48 +138,36 @@ func action(c *coral.Command, args []string) (err error) {
 			return errors.Errorf("Unsuported algorithm: %s", alg)
 		}
 		hashes = append(hashes, h)
-		mhashes[alg] = h
+		c.mhashes[alg] = h
 	}
 
-	filename := strings.TrimSpace(args[0])
+	//
+
 	f, err := os.Open(filename)
 	if err != nil {
 		return errors.Wrap(err, "file")
 	}
 	defer f.Close()
 
+	//
+
 	w := io.MultiWriter(hashes...)
-	if _, err := io.Copy(w, f); err != nil {
-		return errors.Wrap(err, "checksum")
-	}
-
-	if appendToFile != "" {
-		return writeToFile(mhashes, filename)
-	}
-
-	// STDOUT
-	fmt.Println("Checksums:")
-	for _, alg := range supported {
-		if h, ok := mhashes[alg]; ok {
-			fmt.Printf("%12s: %x\n", alg, h.Sum(nil))
-		}
-	}
-
-	return nil
+	_, err = io.Copy(w, f)
+	return errors.Wrap(err, "checksum")
 }
 
-func writeToFile(mhashes map[string]hash.Hash, filename string) error {
-	b, err := ioutil.ReadFile(appendToFile)
+func (c *controller) writeToFile(filename string) error {
+	b, err := os.ReadFile(c.append)
 	if err != nil {
 		b = []byte{}
 	}
 	buf := bytes.NewBuffer(b)
 
-	for _, alg := range supported {
-		if h, ok := mhashes[alg]; ok {
+	for _, alg := range c.supported {
+		if h, ok := c.mhashes[alg]; ok {
 			buf.WriteString(fmt.Sprintf("%x  %s\n", h.Sum(nil), filename))
 		}
 	}
 
-	return ioutil.WriteFile(appendToFile, buf.Bytes(), 0644)
+	return os.WriteFile(c.append, buf.Bytes(), 0644)
 }
