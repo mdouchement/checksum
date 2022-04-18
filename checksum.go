@@ -14,8 +14,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/muesli/coral"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -40,14 +40,14 @@ func main() {
 		mhashes:   make(map[string]hash.Hash, 0),
 	}
 
-	cmd := &coral.Command{
+	cmd := &cobra.Command{
 		Use:          "checksum file",
 		Short:        "File checksum",
 		Long:         "File checksum",
 		SilenceUsage: true,
 		Version:      fmt.Sprintf("%s - build %.7s @ %s", version, revision, date),
-		Args:         coral.ExactArgs(1),
-		RunE: func(_ *coral.Command, args []string) error {
+		Args:         cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
 			filename := strings.TrimSpace(args[0])
 
 			//

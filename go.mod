@@ -1,10 +1,10 @@
 module github.com/mdouchement/checksum
 
-go 1.17
+go 1.18
 
 require (
-	github.com/muesli/coral v1.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/cobra v1.4.0
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 )
 
